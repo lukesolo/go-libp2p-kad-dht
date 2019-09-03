@@ -16,9 +16,9 @@ import (
 	cid "github.com/ipfs/go-cid"
 	u "github.com/ipfs/go-ipfs-util"
 	logging "github.com/ipfs/go-log"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	kb "github.com/libp2p/go-libp2p-kbucket"
 	record "github.com/libp2p/go-libp2p-record"
+	pb "github.com/lukesolo/go-libp2p-kad-dht/pb"
 )
 
 // asyncQueryBuffer is the size of buffered channels in async queries. This

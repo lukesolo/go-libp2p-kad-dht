@@ -18,10 +18,10 @@ import (
 	"go.opencensus.io/tag"
 	"golang.org/x/xerrors"
 
-	"github.com/libp2p/go-libp2p-kad-dht/metrics"
-	opts "github.com/libp2p/go-libp2p-kad-dht/opts"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
-	providers "github.com/libp2p/go-libp2p-kad-dht/providers"
+	"github.com/lukesolo/go-libp2p-kad-dht/metrics"
+	opts "github.com/lukesolo/go-libp2p-kad-dht/opts"
+	pb "github.com/lukesolo/go-libp2p-kad-dht/pb"
+	providers "github.com/lukesolo/go-libp2p-kad-dht/providers"
 
 	proto "github.com/gogo/protobuf/proto"
 	cid "github.com/ipfs/go-cid"

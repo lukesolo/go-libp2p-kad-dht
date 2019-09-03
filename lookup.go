@@ -10,9 +10,9 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	kb "github.com/libp2p/go-libp2p-kbucket"
 	notif "github.com/libp2p/go-libp2p-routing/notifications"
+	pb "github.com/lukesolo/go-libp2p-kad-dht/pb"
 )
 
 func tryFormatLoggableKey(k string) (string, error) {

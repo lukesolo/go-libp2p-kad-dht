@@ -12,13 +12,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 
-	"github.com/libp2p/go-libp2p-kad-dht/metrics"
-	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	"github.com/lukesolo/go-libp2p-kad-dht/metrics"
+	pb "github.com/lukesolo/go-libp2p-kad-dht/pb"
 
 	ggio "github.com/gogo/protobuf/io"
 
 	"github.com/libp2p/go-msgio"
-	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 )
 
@@ -92,49 +91,30 @@ func (dht *IpfsDHT) handleNewMessage(s network.Stream) bool {
 			if err.Error() != "stream reset" {
 				logger.Debugf("error reading message: %#v", err)
 			}
-			stats.RecordWithTags(
-				ctx,
-				[]tag.Mutator{tag.Upsert(metrics.KeyMessageType, "UNKNOWN")},
-				metrics.ReceivedMessageErrors.M(1),
-			)
 			return false
 		}
 		err = req.Unmarshal(msgbytes)
 		r.ReleaseMsg(msgbytes)
 		if err != nil {
 			logger.Debugf("error unmarshalling message: %#v", err)
-			stats.RecordWithTags(
-				ctx,
-				[]tag.Mutator{tag.Upsert(metrics.KeyMessageType, "UNKNOWN")},
-				metrics.ReceivedMessageErrors.M(1),
-			)
 			return false
 		}
 
 		timer.Reset(dhtStreamIdleTimeout)
 
-		startTime := time.Now()
 		ctx, _ = tag.New(
 			ctx,
 			tag.Upsert(metrics.KeyMessageType, req.GetType().String()),
 		)
 
-		stats.Record(
-			ctx,
-			metrics.ReceivedMessages.M(1),
-			metrics.ReceivedBytes.M(int64(req.Size())),
-		)
-
 		handler := dht.handlerForMsgType(req.GetType())
 		if handler == nil {
-			stats.Record(ctx, metrics.ReceivedMessageErrors.M(1))
 			logger.Warningf("can't handle received message of type %v", req.GetType())
 			return false
 		}
 
 		resp, err := handler(ctx, mPeer, &req)
 		if err != nil {
-			stats.Record(ctx, metrics.ReceivedMessageErrors.M(1))
 			logger.Debugf("error handling message: %v", err)
 			return false
 		}
@@ -148,14 +128,9 @@ func (dht *IpfsDHT) handleNewMessage(s network.Stream) bool {
 		// send out response msg
 		err = writeMsg(s, resp)
 		if err != nil {
-			stats.Record(ctx, metrics.ReceivedMessageErrors.M(1))
 			logger.Debugf("error writing response: %v", err)
 			return false
 		}
-
-		elapsedTime := time.Since(startTime)
-		latencyMillis := float64(elapsedTime) / float64(time.Millisecond)
-		stats.Record(ctx, metrics.InboundRequestLatency.M(latencyMillis))
 	}
 }
 
@@ -166,7 +141,6 @@ func (dht *IpfsDHT) sendRequest(ctx context.Context, p peer.ID, pmes *pb.Message
 
 	ms, err := dht.messageSenderForPeer(ctx, p)
 	if err != nil {
-		stats.Record(ctx, metrics.SentRequestErrors.M(1))
 		return nil, err
 	}
 
@@ -174,21 +148,12 @@ func (dht *IpfsDHT) sendRequest(ctx context.Context, p peer.ID, pmes *pb.Message
 
 	rpmes, err := ms.SendRequest(ctx, pmes)
 	if err != nil {
-		stats.Record(ctx, metrics.SentRequestErrors.M(1))
 		return nil, err
 	}
 
 	// update the peer (on valid msgs only)
 	dht.updateFromMessage(ctx, p, rpmes)
 
-	stats.Record(
-		ctx,
-		metrics.SentRequests.M(1),
-		metrics.SentBytes.M(int64(pmes.Size())),
-		metrics.OutboundRequestLatency.M(
-			float64(time.Since(start))/float64(time.Millisecond),
-		),
-	)
 	dht.peerstore.RecordLatency(p, time.Since(start))
 	logger.Event(ctx, "dhtReceivedMessage", dht.self, p, rpmes)
 	return rpmes, nil
@@ -200,20 +165,13 @@ func (dht *IpfsDHT) sendMessage(ctx context.Context, p peer.ID, pmes *pb.Message
 
 	ms, err := dht.messageSenderForPeer(ctx, p)
 	if err != nil {
-		stats.Record(ctx, metrics.SentMessageErrors.M(1))
 		return err
 	}
 
 	if err := ms.SendMessage(ctx, pmes); err != nil {
-		stats.Record(ctx, metrics.SentMessageErrors.M(1))
 		return err
 	}
 
-	stats.Record(
-		ctx,
-		metrics.SentMessages.M(1),
-		metrics.SentBytes.M(int64(pmes.Size())),
-	)
 	logger.Event(ctx, "dhtSentMessage", dht.self, p, pmes)
 	return nil
 }
